@@ -1,0 +1,10 @@
+{
+  "description": "Effortlessly create and manage product orders with a user-friendly interface, designed for quick access and seamless communication via WhatsApp.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
