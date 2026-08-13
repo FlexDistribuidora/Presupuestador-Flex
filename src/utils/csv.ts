@@ -1,86 +1,72 @@
-export interface ProductoCSV {
-  marca: string
-  codigoInterno: string
-  nombre: string
-  categoria: string
-  descripcion: string
-  precio: number
-  stock: number
+export interface Producto {
+  marca: string;
+  codigoInterno: string;
+  nombre: string;
+  categoria: string;
+  descripcion: string;
+  precio: number;
+  stock: number;
 }
 
-/** Parsea una línea de CSV respetando comillas (para campos con comas, ej. descripciones). */
-function parseCSVLine(line: string): string[] {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
+export function parseProductosCSV(csvText: string): Producto[] {
+  const result: Producto[] = [];
+  let currentField = '';
+  let currentRow: string[] = [];
+  let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
+  // Lector inteligente para ignorar saltos de línea dentro de las descripciones
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
 
-    if (inQuotes) {
-      if (char === '"') {
-        if (line[i + 1] === '"') {
-          current += '"'
-          i++
-        } else {
-          inQuotes = false
-        }
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        currentField += '"';
+        i++; // salteamos la comilla doble
       } else {
-        current += char
+        inQuotes = !inQuotes;
       }
+    } else if (char === ';' && !inQuotes) {
+      // Acá detectamos el Punto y Coma (;) de tu Excel
+      currentRow.push(currentField);
+      currentField = '';
+    } else if ((char === '\n' || (char === '\r' && nextChar === '\n')) && !inQuotes) {
+      if (char === '\r') i++; // saltear el \n de Windows
+      currentRow.push(currentField);
+      if (currentRow.length > 1) { 
+        result.push(mapRowToProduct(currentRow));
+      }
+      currentRow = [];
+      currentField = '';
     } else {
-      if (char === '"') {
-        inQuotes = true
-      } else if (char === ',') {
-        result.push(current)
-        current = ''
-      } else {
-        current += char
-      }
+      currentField += char;
     }
   }
 
-  result.push(current)
-  return result
-}
-
-/**
- * Parsea el CSV de productos. Espera columnas (en cualquier orden):
- * marca, codigoInterno, nombre, categoria, descripcion, precio, stock
- */
-export function parseProductosCSV(raw: string): ProductoCSV[] {
-  const lines = raw.split(/\r?\n/).filter((l) => l.trim().length > 0)
-  if (lines.length === 0) return []
-
-  const headers = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase().replace(/\s+/g, ''))
-
-  const colIndex = {
-    marca: headers.indexOf('marca'),
-    codigoInterno: headers.indexOf('codigointerno'),
-    nombre: headers.indexOf('nombre'),
-    categoria: headers.indexOf('categoria'),
-    descripcion: headers.indexOf('descripcion'),
-    precio: headers.indexOf('precio'),
-    stock: headers.indexOf('stock'),
+  // Agregar la última fila si el archivo no termina en salto de línea
+  if (currentRow.length > 0 || currentField !== '') {
+    currentRow.push(currentField);
+    if (currentRow.length > 1) {
+      result.push(mapRowToProduct(currentRow));
+    }
   }
 
-  const getCol = (cols: string[], i: number) => (i >= 0 ? (cols[i] ?? '').trim() : '')
+  // Devolvemos los productos salteando la Fila 1 (que son los títulos)
+  return result.slice(1);
+}
 
-  return lines
-    .slice(1)
-    .map((line) => {
-      const cols = parseCSVLine(line)
-      const precioRaw = getCol(cols, colIndex.precio).replace(/\./g, '').replace(',', '.')
-      const stockRaw = getCol(cols, colIndex.stock)
-      return {
-        marca: getCol(cols, colIndex.marca),
-        codigoInterno: getCol(cols, colIndex.codigoInterno),
-        nombre: getCol(cols, colIndex.nombre),
-        categoria: getCol(cols, colIndex.categoria),
-        descripcion: getCol(cols, colIndex.descripcion),
-        precio: Number(precioRaw) || 0,
-        stock: Number(stockRaw) || 0,
-      }
-    })
-    .filter((p) => p.codigoInterno && p.nombre)
+function mapRowToProduct(row: string[]): Producto {
+  // Limpieza de precios: Convierte "8.901,00" en "8901.00" para que la app pueda sumarlo
+  let precioStr = row[5] || '0';
+  precioStr = precioStr.replace(/\./g, '').replace(',', '.'); 
+
+  return {
+    marca: row[0]?.trim() || '',
+    codigoInterno: row[1]?.trim() || '',
+    nombre: row[2]?.trim() || '',
+    categoria: row[3]?.trim() || '',
+    descripcion: row[4]?.trim() || '',
+    precio: parseFloat(precioStr) || 0,
+    stock: parseInt(row[6] || '0', 10) || 0,
+  };
 }

@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
-import productosCsvRaw from './productos/productos.csv?raw'
-import { parseProductosCSV } from './utils/csv'
+import { useState, useMemo } from 'react';
+import productosCsvRaw from './productos/productos.csv?raw';
+import { parseProductosCSV } from './utils/csv';
 
 // --- Types ---
 interface Product {
@@ -162,13 +162,14 @@ function ProductSearch({
         )}
       </div>
 
-      {/* Results */}
+     {/* Results */}
       {results.length > 0 && (
         <div
           style={{
             marginTop: 10,
             borderRadius: 12,
-            overflow: 'hidden',
+            overflowY: 'auto',      // Activamos el scroll vertical
+            maxHeight: '350px',     // Le damos un tope máximo de altura
             border: '1px solid #F4A995',
             background: '#fff',
           }}
@@ -713,11 +714,7 @@ function Footer({ name, items }: { name: string; items: CartItem[] }) {
 }
 
 // --- Main App ---
-const INITIAL_CART: CartItem[] = [
-  { product: CATALOG[1], qty: 2 },
-  { product: CATALOG[7], qty: 1 },
-  { product: CATALOG[3], qty: 3 },
-]
+const INITIAL_CART: CartItem[] = []
 
 export default function App() {
   const [cart, setCart] = useState<CartItem[]>(INITIAL_CART)
